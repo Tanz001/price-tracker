@@ -1,0 +1,6 @@
+{
+  "name": "PriceRadar - AI Price Tracker",
+  "description": "AI-powered price tracking and multi-store comparison. Paste any product link, compare live prices across 100+ stores, and get instant drop alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
