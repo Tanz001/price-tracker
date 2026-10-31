@@ -5,8 +5,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export function useLenis() {
+export function useLenis(enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
+
     // Respect user's accessibility setting for motion
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
@@ -34,5 +36,5 @@ export function useLenis() {
       gsap.ticker.remove(updateLenis);
       lenis.destroy();
     };
-  }, []);
+  }, [enabled]);
 }

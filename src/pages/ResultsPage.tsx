@@ -34,7 +34,7 @@ import { useToast } from '../context/ToastContext';
 const LOADING_STEPS = [
   'Reading product page…',
   'Identifying the exact product…',
-  'Searching 100+ stores…',
+  'Searching the best sources online…',
   'Comparing prices…',
 ];
 
@@ -43,7 +43,7 @@ export const ResultsPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const urlParam = searchParams.get('url') || 'https://www.amazon.com/dp/B09XS7JWHH';
+  const urlParam = searchParams.get('url') || 'https://example.com/product/sony-wh-1000xm5';
 
   // Loading state with multi-step progression
   const [loading, setLoading] = useState(true);

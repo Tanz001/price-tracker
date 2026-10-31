@@ -75,3 +75,39 @@ export interface CreateTrackerPayload {
   mode: 'any' | 'drop' | 'target';
   targetPrice?: number;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
+  avatarInitials: string;
+  createdAt: string;
+}
+
+export interface NotificationSettings {
+  email: string;
+  priceDrops: boolean;
+  targetReached: boolean;
+  weeklyDigest: boolean;
+  stockAlerts: boolean;
+  marketing: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+}
+
+export type TrackingFailureStatus = 'open' | 'retrying' | 'resolved';
+
+export interface TrackingFailure {
+  id: string;
+  productTitle: string;
+  productUrl: string;
+  storeName: string;
+  errorCode: string;
+  errorMessage: string;
+  attempts: number;
+  lastAttemptAt: string;
+  status: TrackingFailureStatus;
+  severity: 'low' | 'medium' | 'high';
+}

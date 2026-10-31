@@ -131,7 +131,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
         {/* Highlight pill */}
         <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>Active radar: Scanning 100+ stores every 15 minutes</span>
+          <span>Active radar: Watching prices across the internet</span>
         </div>
 
         {/* Actions */}

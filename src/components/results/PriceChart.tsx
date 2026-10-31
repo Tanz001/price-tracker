@@ -19,10 +19,10 @@ interface PriceChartProps {
 }
 
 const STORE_COLORS: Record<string, { label: string; stroke: string }> = {
-  amazon: { label: 'Amazon', stroke: '#F59E0B' },
-  walmart: { label: 'Walmart', stroke: '#0284C7' },
-  bestbuy: { label: 'Best Buy', stroke: '#2563EB' },
-  ebay: { label: 'eBay', stroke: '#E11D48' },
+  amazon: { label: 'Source A', stroke: '#F59E0B' },
+  walmart: { label: 'Source B', stroke: '#0284C7' },
+  bestbuy: { label: 'Source C', stroke: '#2563EB' },
+  ebay: { label: 'Source D', stroke: '#E11D48' },
 };
 
 export const PriceChart: React.FC<PriceChartProps> = ({ productId }) => {
@@ -217,7 +217,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ productId }) => {
                 <Line
                   type="monotone"
                   dataKey="amazon"
-                  name="Amazon"
+                  name="Source A"
                   stroke={STORE_COLORS.amazon.stroke}
                   strokeWidth={1.5}
                   dot={false}
@@ -228,7 +228,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ productId }) => {
                 <Line
                   type="monotone"
                   dataKey="walmart"
-                  name="Walmart"
+                  name="Source B"
                   stroke={STORE_COLORS.walmart.stroke}
                   strokeWidth={1.5}
                   dot={false}
@@ -238,7 +238,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ productId }) => {
                 <Line
                   type="monotone"
                   dataKey="bestbuy"
-                  name="Best Buy"
+                  name="Source C"
                   stroke={STORE_COLORS.bestbuy.stroke}
                   strokeWidth={1.5}
                   dot={false}
@@ -248,7 +248,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ productId }) => {
                 <Line
                   type="monotone"
                   dataKey="ebay"
-                  name="eBay"
+                  name="Source D"
                   stroke={STORE_COLORS.ebay.stroke}
                   strokeWidth={1.5}
                   dot={false}
