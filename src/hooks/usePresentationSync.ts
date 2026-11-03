@@ -135,6 +135,10 @@ export function usePresentationSync(): PresentationState {
         type: 'broadcast',
         event: 'scroll',
         payload,
+      }).then((res) => {
+        if (res !== 'ok' && res && typeof res === 'object' && 'error' in (res as object)) {
+          // ignore transient send errors while connecting
+        }
       });
     }, 50);
 

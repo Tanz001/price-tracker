@@ -67,8 +67,15 @@ export const PresentationBanner: React.FC<Props> = ({ state }) => {
               Room <span className="font-mono font-semibold text-slate-700 dark:text-slate-200">{state.room}</span>
               {' · '}
               scroll {(state.lastProgress * 100).toFixed(0)}%
-              {state.error ? ` · ${state.error}` : ''}
             </p>
+            {state.error && (
+              <p className="text-[11px] font-medium text-rose-500 leading-relaxed">{state.error}</p>
+            )}
+            {!state.connected && !state.error && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                Waiting for Supabase Realtime… keep both tabs open on the same room.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
