@@ -27,6 +27,7 @@ import { OverviewPage } from './pages/dashboard/OverviewPage';
 import { ProductsPage } from './pages/dashboard/ProductsPage';
 import { usePresentationSync } from './hooks/usePresentationSync';
 import { PresentationBanner } from './components/presentation/PresentationBanner';
+import { PresentationSessionKeeper } from './components/presentation/PresentationSessionKeeper';
 
 function LegacyProductRedirect() {
   const { trackerId } = useParams();
@@ -47,6 +48,7 @@ function AppContent() {
         isDashboard ? 'bg-[#F4F6FB] dark:bg-[#070B16]' : 'bg-[#F8FAFC] dark:bg-[#0B1020]'
       }`}
     >
+      <PresentationSessionKeeper />
       {!isDashboard && <Navbar />}
       <PresentationBanner state={presentation} />
 

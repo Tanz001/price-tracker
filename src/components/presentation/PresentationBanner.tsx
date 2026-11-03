@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Cast, Copy, Radio, X } from 'lucide-react';
 import type { PresentationState } from '../../hooks/usePresentationSync';
 import { useToast } from '../../context/ToastContext';
+import { writePresentationSession } from '../../lib/presentation';
 
 interface Props {
   state: PresentationState;
@@ -95,6 +96,7 @@ export const PresentationBanner: React.FC<Props> = ({ state }) => {
               </button>
               <Link
                 to={exitHref}
+                onClick={() => writePresentationSession(null)}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
               >
                 <X className="w-3 h-3" />

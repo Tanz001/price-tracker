@@ -2,8 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import {
+  isPresentationFlag,
+  presentationAwareHref,
+  readPresentationSession,
+  type PresentationRole,
+} from '../lib/presentation';
 
-export type PresentationRole = 'leader' | 'follower';
+export type { PresentationRole };
 
 export interface PresentationState {
   enabled: boolean;
@@ -15,6 +21,7 @@ export interface PresentationState {
 }
 
 interface SyncPayload {
+  type?: 'scroll' | 'navigate';
   progress: number;
   path: string;
   search: string;
@@ -62,17 +69,27 @@ function throttle(fn: () => void, wait: number) {
   };
 }
 
-function withPresentationParams(baseSearch: string, present: URLSearchParams): string {
-  const next = new URLSearchParams(baseSearch);
-  for (const key of ['present', 'role', 'room'] as const) {
-    const v = present.get(key);
-    if (v) next.set(key, v);
-  }
-  return next.toString();
+function followerHref(path: string, leaderSearch: string): string {
+  const session = readPresentationSession() || {
+    role: 'follower' as const,
+    room: 'demo',
+  };
+  // Prefer follower's own role/room from session; strip leader role from incoming search
+  const cleaned = new URLSearchParams(
+    leaderSearch.startsWith('?') ? leaderSearch.slice(1) : leaderSearch
+  );
+  cleaned.delete('present');
+  cleaned.delete('role');
+  cleaned.delete('room');
+  const rest = cleaned.toString();
+  return presentationAwareHref(path || '/', rest ? `?${rest}` : '', {
+    ...session,
+    role: 'follower',
+  });
 }
 
 /**
- * Temporary Presentation / Scroll Sync Mode.
+ * Temporary Presentation / Scroll + Navigation Sync Mode.
  * Enable with: ?present=1&role=leader|follower&room=demo
  */
 export function usePresentationSync(): PresentationState {
@@ -80,7 +97,7 @@ export function usePresentationSync(): PresentationState {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const enabled = searchParams.get('present') === '1' || searchParams.get('present') === 'true';
+  const enabled = isPresentationFlag(searchParams.get('present'));
   const roleParam = searchParams.get('role');
   const role: PresentationRole | null =
     roleParam === 'leader' || roleParam === 'follower' ? roleParam : enabled ? 'leader' : null;
@@ -93,11 +110,10 @@ export function usePresentationSync(): PresentationState {
   const applyingRemote = useRef(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const locationRef = useRef(location);
-  const searchParamsRef = useRef(searchParams);
   const navigateRef = useRef(navigate);
+  const lastSentPathRef = useRef<string>('');
 
   locationRef.current = location;
-  searchParamsRef.current = searchParams;
   navigateRef.current = navigate;
 
   const channelName = useMemo(() => `present:${room}`, [room]);
@@ -121,59 +137,66 @@ export function usePresentationSync(): PresentationState {
     });
     channelRef.current = channel;
 
-    const publish = throttle(() => {
-      if (applyingRemote.current || role !== 'leader') return;
+    const send = (event: 'scroll' | 'navigate', extra?: Partial<SyncPayload>) => {
+      if (applyingRemote.current && role === 'leader') return;
       const loc = locationRef.current;
       const payload: SyncPayload = {
+        type: event,
         progress: getScrollProgress(),
         path: loc.pathname,
         search: loc.search,
         ts: Date.now(),
+        ...extra,
       };
       setLastProgress(payload.progress);
       void channel.send({
         type: 'broadcast',
-        event: 'scroll',
+        event,
         payload,
-      }).then((res) => {
-        if (res !== 'ok' && res && typeof res === 'object' && 'error' in (res as object)) {
-          // ignore transient send errors while connecting
-        }
       });
+    };
+
+    const publishScroll = throttle(() => {
+      if (role !== 'leader') return;
+      send('scroll');
     }, 50);
+
+    const applyRemotePayload = (data: SyncPayload, forceNavigate: boolean) => {
+      if (!data || typeof data.progress !== 'number') return;
+
+      applyingRemote.current = true;
+      setLastProgress(data.progress);
+
+      const loc = locationRef.current;
+      const targetPath = data.path || '/';
+      const nextFull = followerHref(targetPath, data.search || '');
+      const pathChanged = targetPath !== loc.pathname;
+
+      if (forceNavigate || pathChanged) {
+        if (nextFull !== `${loc.pathname}${loc.search}` || pathChanged) {
+          navigateRef.current(nextFull, { replace: true });
+          requestAnimationFrame(() => {
+            applyScrollProgress(data.progress);
+            requestAnimationFrame(() => {
+              applyingRemote.current = false;
+            });
+          });
+          return;
+        }
+      }
+
+      applyScrollProgress(data.progress);
+      requestAnimationFrame(() => {
+        applyingRemote.current = false;
+      });
+    };
 
     if (role === 'follower') {
       channel.on('broadcast', { event: 'scroll' }, ({ payload }) => {
-        const data = payload as SyncPayload;
-        if (!data || typeof data.progress !== 'number') return;
-
-        applyingRemote.current = true;
-        setLastProgress(data.progress);
-
-        const loc = locationRef.current;
-        const present = searchParamsRef.current;
-        const targetPath = data.path || '/';
-        const nextSearch = withPresentationParams(data.search || '', present);
-        const nextFull = nextSearch ? `${targetPath}?${nextSearch}` : targetPath;
-        const currentFull = `${loc.pathname}${loc.search}`;
-
-        if (targetPath !== loc.pathname || nextFull !== currentFull) {
-          if (targetPath !== loc.pathname) {
-            navigateRef.current(nextFull, { replace: true });
-            requestAnimationFrame(() => {
-              applyScrollProgress(data.progress);
-              requestAnimationFrame(() => {
-                applyingRemote.current = false;
-              });
-            });
-            return;
-          }
-        }
-
-        applyScrollProgress(data.progress);
-        requestAnimationFrame(() => {
-          applyingRemote.current = false;
-        });
+        applyRemotePayload(payload as SyncPayload, false);
+      });
+      channel.on('broadcast', { event: 'navigate' }, ({ payload }) => {
+        applyRemotePayload(payload as SyncPayload, true);
       });
     }
 
@@ -182,7 +205,10 @@ export function usePresentationSync(): PresentationState {
       if (status === 'SUBSCRIBED') {
         setConnected(true);
         setError(null);
-        if (role === 'leader') publish();
+        if (role === 'leader') {
+          lastSentPathRef.current = locationRef.current.pathname;
+          send('navigate');
+        }
       } else if (status === 'CHANNEL_ERROR') {
         setConnected(false);
         setError('Supabase Realtime channel error');
@@ -193,7 +219,7 @@ export function usePresentationSync(): PresentationState {
     });
 
     if (role === 'leader') {
-      const onScroll = () => publish();
+      const onScroll = () => publishScroll();
       window.addEventListener('scroll', onScroll, { passive: true });
       return () => {
         cancelled = true;
@@ -212,21 +238,28 @@ export function usePresentationSync(): PresentationState {
     };
   }, [enabled, role, channelName]);
 
-  // Broadcast immediately when leader changes route
+  // Broadcast navigate whenever leader route changes
   useEffect(() => {
     if (!enabled || role !== 'leader' || !channelRef.current || !connected) return;
+    if (applyingRemote.current) return;
+    if (lastSentPathRef.current === location.pathname) {
+      // still notify search-only changes lightly via scroll payload path
+    }
+    lastSentPathRef.current = location.pathname;
     const payload: SyncPayload = {
+      type: 'navigate',
       progress: getScrollProgress(),
       path: location.pathname,
       search: location.search,
       ts: Date.now(),
     };
+    setLastProgress(payload.progress);
     void channelRef.current.send({
       type: 'broadcast',
-      event: 'scroll',
+      event: 'navigate',
       payload,
     });
-  }, [enabled, role, connected, location.pathname]);
+  }, [enabled, role, connected, location.pathname, location.search]);
 
   return {
     enabled,
