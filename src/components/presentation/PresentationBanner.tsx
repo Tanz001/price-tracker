@@ -23,8 +23,12 @@ export const PresentationBanner: React.FC<Props> = ({ state }) => {
     return q ? `?${q}` : '/';
   })();
 
+  const siteBase =
+    (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '') ||
+    window.location.origin;
+
   const copyPairLink = async (role: 'leader' | 'follower') => {
-    const url = new URL(window.location.href);
+    const url = new URL(window.location.pathname + window.location.search, siteBase);
     url.searchParams.set('present', '1');
     url.searchParams.set('role', role);
     url.searchParams.set('room', state.room);
