@@ -25,6 +25,8 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { AdminPage } from './pages/AdminPage';
 import { OverviewPage } from './pages/dashboard/OverviewPage';
 import { ProductsPage } from './pages/dashboard/ProductsPage';
+import { usePresentationSync } from './hooks/usePresentationSync';
+import { PresentationBanner } from './components/presentation/PresentationBanner';
 
 function LegacyProductRedirect() {
   const { trackerId } = useParams();
@@ -35,7 +37,9 @@ function AppContent() {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const isDashboard = location.pathname.startsWith('/dashboard');
-  useLenis(!isDashboard);
+  const presentation = usePresentationSync();
+  // Disable Lenis while presenting so remote scroll isn't fought by smooth scroll
+  useLenis(!isDashboard && !presentation.enabled);
 
   return (
     <div
@@ -44,6 +48,7 @@ function AppContent() {
       }`}
     >
       {!isDashboard && <Navbar />}
+      <PresentationBanner state={presentation} />
 
       <main
         key={isDashboard ? 'dash' : location.pathname}
