@@ -9,11 +9,9 @@ import {
   NotificationSettings,
   TrackingFailure,
 } from '../types';
-
-// High-fidelity image assets generated for PriceRadar
-const SONY_HEADPHONES_IMG = '/src/assets/images/priceradar_sony_headphones_1793426876548.jpg';
-const IPHONE_15_IMG = '/src/assets/images/priceradar_iphone_product_1793426876876.jpg';
-const PS5_SLIM_IMG = '/src/assets/images/priceradar_ps5_console_1793426877339.jpg';
+import SONY_HEADPHONES_IMG from '../assets/images/priceradar_sony_headphones_1793426876548.jpg';
+import IPHONE_15_IMG from '../assets/images/priceradar_iphone_product_1793426876876.jpg';
+import PS5_SLIM_IMG from '../assets/images/priceradar_ps5_console_1793426877339.jpg';
 
 // Pre-configured mock products catalog
 const MOCK_PRODUCTS: Record<string, { product: Product; offers: StoreOffer[] }> = {
@@ -551,11 +549,54 @@ const MOCK_PRODUCTS: Record<string, { product: Product; offers: StoreOffer[] }> 
 // Initial Seed Trackers in LocalStorage if not present
 const STORAGE_KEY_TRACKERS = 'priceradar_user_trackers_v1';
 
+function resolveProductImage(productId: string, fallback?: string): string {
+  if (productId.includes('iphone') || productId.includes('apple')) return IPHONE_15_IMG;
+  if (productId.includes('ps5')) return PS5_SLIM_IMG;
+  if (productId.includes('sony') || productId.includes('wh1000')) return SONY_HEADPHONES_IMG;
+  return fallback || SONY_HEADPHONES_IMG;
+}
+
+function hydrateTrackerImages(trackers: Tracker[]): Tracker[] {
+  return trackers.map((t) => {
+    const catalog =
+      t.productId === MOCK_PRODUCTS.iphone.product.id
+        ? MOCK_PRODUCTS.iphone.product
+        : t.productId === MOCK_PRODUCTS.ps5.product.id
+          ? MOCK_PRODUCTS.ps5.product
+          : t.productId === MOCK_PRODUCTS.sony.product.id
+            ? MOCK_PRODUCTS.sony.product
+            : null;
+
+    const imageUrl = catalog?.imageUrl || resolveProductImage(t.productId, t.product?.imageUrl);
+    if (t.product?.imageUrl === imageUrl) return t;
+    return {
+      ...t,
+      product: {
+        ...t.product,
+        imageUrl,
+        ...(catalog
+          ? {
+              title: catalog.title,
+              brand: catalog.brand,
+              model: catalog.model,
+            }
+          : {}),
+      },
+    };
+  });
+}
+
 function getStoredTrackers(): Tracker[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_TRACKERS);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw) as Tracker[];
+      const hydrated = hydrateTrackerImages(parsed);
+      // Persist fixed image URLs so old /src/assets paths don't stick around
+      if (JSON.stringify(parsed) !== JSON.stringify(hydrated)) {
+        saveStoredTrackers(hydrated);
+      }
+      return hydrated;
     }
   } catch (e) {
     console.error('Failed reading trackers from storage', e);
